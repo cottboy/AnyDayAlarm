@@ -29,3 +29,6 @@ ios/Flutter/Flutter.podspec
 # Misc
 *.log
 .DS_Store
+
+# ZCode 工具自动生成
+.zcodeignore
