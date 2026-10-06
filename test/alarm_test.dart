@@ -235,7 +235,7 @@ void main() {
       expect(restored.isLeapMonth, isFalse);
     });
 
-    test('旧数据缺 calendar 字段时默认公历（本地数据迁移）', () {
+    test('缺省字段默认公历（防御脏数据）', () {
       final restored = Alarm.fromJson({
         'id': 'legacy',
         'repeatType': 0,

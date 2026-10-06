@@ -2,8 +2,8 @@ import 'dart:math';
 
 import '../lunar/lunar_helper.dart';
 
-/// 重复类型
-enum RepeatType { once, daily, weekly, yearly, monthly }
+/// 重复类型（按触发间隔从小到大；枚举顺序即 JSON 序列化 index）
+enum RepeatType { once, daily, weekly, monthly, yearly }
 
 /// 日期基准：公历 / 农历（once / yearly / monthly 可选，daily / weekly 恒为公历）
 enum CalendarType { solar, lunar }

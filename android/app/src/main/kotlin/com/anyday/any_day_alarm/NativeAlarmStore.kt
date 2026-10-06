@@ -16,7 +16,7 @@ import java.util.Calendar
 data class NativeAlarm(
     val id: String,
     val enabled: Boolean,
-    val repeatType: Int, // 0=一次性 1=每天 2=每周自定义 3=每年 4=每月
+    val repeatType: Int, // 0=一次性 1=每天 2=每周自定义 3=每月 4=每年
     val triggerAt: Long?,
     val futureTriggers: List<Long>,
     val onceAt: Long?,
