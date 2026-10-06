@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AnyDay Alarm</string>
+    <string name="ring_channel_name">Alarm ringing</string>
+    <string name="ring_channel_desc">Notification channel used while an alarm is ringing</string>
+    <string name="ring_default_title">Alarm</string>
+    <string name="ring_notification_text">Tap to view and stop ringing</string>
+</resources>

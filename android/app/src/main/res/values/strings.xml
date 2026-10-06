@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">任意日期闹钟</string>
+    <string name="ring_channel_name">闹钟响铃</string>
+    <string name="ring_channel_desc">闹钟到点响铃时使用的通知渠道</string>
+    <string name="ring_default_title">闹钟</string>
+    <string name="ring_notification_text">点按查看并关闭响铃</string>
+</resources>

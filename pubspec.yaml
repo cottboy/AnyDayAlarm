@@ -1,0 +1,28 @@
+name: any_day_alarm
+description: "支持任意日期任意时间响铃的闹钟应用。"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  # 版本跟随 flutter_localizations 内部约束
+  intl: any
+  # 纯本地存储：闹钟数据以 JSON 形式持久化
+  shared_preferences: ^2.3.0
+  # 农历换算：6tail 官方 Dart 版（寿星天文历算法，支持 1-9999 年），MIT 无第三方依赖
+  lunar: ^1.7.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true

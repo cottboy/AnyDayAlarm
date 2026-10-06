@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 铃声通过 resources.getIdentifier() 动态引用，资源收缩器无法识别，
+     必须显式声明保留，否则 release 构建会被当未使用资源剔除。 -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/classic,@raw/digital,@raw/chime,@raw/rise" />
