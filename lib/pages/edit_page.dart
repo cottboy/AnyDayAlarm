@@ -387,13 +387,23 @@ class _EditPageState extends State<EditPage> {
           Text(l10n.editSectionRepeat, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
           Wrap(
-            spacing: 8,
+            spacing: 6,
             runSpacing: 8,
             children: [
-              for (final type in RepeatType.values)
+              // UI 按触发间隔从小到大排列；与枚举声明顺序（JSON 序列化 index）无关
+              for (final type in const [
+                RepeatType.once,
+                RepeatType.daily,
+                RepeatType.weekly,
+                RepeatType.monthly,
+                RepeatType.yearly,
+              ])
                 ChoiceChip(
                   label: Text(_repeatTypeLabel(l10n, type)),
                   selected: _draft.repeatType == type,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 10),
                   onSelected: (_) => _onRepeatTypeChanged(type),
                 ),
             ],
