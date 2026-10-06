@@ -7,7 +7,7 @@ import '../models/alarm.dart';
 /// 闹钟仓库：纯本地 JSON 持久化。
 /// 数据量小（几十条以内），shared_preferences 足够，无需数据库。
 class AlarmRepository {
-  static const _storageKey = 'alarms_v2';
+  static const _storageKey = 'alarms_v1';
 
   final SharedPreferences _prefs;
   List<Alarm> _cache = const [];
