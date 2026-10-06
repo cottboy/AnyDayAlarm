@@ -395,6 +395,8 @@ class _EditPageState extends State<EditPage> {
                 ChoiceChip(
                   label: Text(_repeatTypeLabel(l10n, type)),
                   selected: _draft.repeatType == type,
+                  // 关闭选中勾号：勾号插入会使 chip 宽度突变，导致整行重新排版跳动
+                  showCheckmark: false,
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   labelPadding: const EdgeInsets.symmetric(horizontal: 10),
