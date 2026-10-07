@@ -36,6 +36,33 @@ class MainActivity : FlutterActivity() {
         private const val REQ_PICK_RINGTONE = 4711
         private const val MAX_RINGTONE_BYTES = 15L * 1024 * 1024
         private const val MAX_LABEL_LENGTH = 100
+        private const val PREFS_STABILITY = "stability"
+        private const val KEY_BATTERY_ASKED = "battery_whitelist_asked"
+
+        /**
+         * 国产 ROM 自启动设置页（包名 to 类名）。
+         * 自启动没有公开 API，只能逐个尝试跳转，全部失败时兜底到应用详情页。
+         */
+        private val AUTO_START_PAGES = listOf(
+            "com.miui.securitycenter" to "com.miui.permcenter.autostart.AutoStartManagementActivity",
+            "com.huawei.systemmanager" to "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity",
+            "com.huawei.systemmanager" to "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity",
+            "com.hihonor.systemmanager" to "com.hihonor.systemmanager.startupmgr.ui.StartupNormalAppListActivity",
+            "com.coloros.safecenter" to "com.coloros.safecenter.permission.startup.StartupAppListActivity",
+            "com.coloros.safecenter" to "com.coloros.safecenter.startupapp.StartupAppListActivity",
+            "com.oppo.safe" to "com.oppo.safe.permission.startup.StartupAppListActivity",
+            "com.vivo.permissionmanager" to "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
+            "com.iqoo.secure" to "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager",
+            "com.iqoo.secure" to "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity",
+            "com.oneplus.security" to "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity",
+            "com.meizu.safe" to "com.meizu.safe.permission.SmartBGActivity",
+        )
+
+        /** 已知会拦截后台拉起的主流厂商关键字（自启动引导仅对这些机型展示）。 */
+        private val AUTO_START_VENDOR_KEYS = setOf(
+            "xiaomi", "redmi", "huawei", "honor", "oppo", "oneplus", "realme",
+            "vivo", "iqoo", "meizu", "letv", "nubia",
+        )
     }
 
     private var pendingPickResult: MethodChannel.Result? = null
@@ -63,6 +90,7 @@ class MainActivity : FlutterActivity() {
         super.onCreate(savedInstanceState)
         handleAlarmIntent(intent)
         requestNotificationPermissionIfNeeded()
+        requestBatteryWhitelistOnFirstRun()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -106,6 +134,49 @@ class MainActivity : FlutterActivity() {
                 )
             }
         }
+    }
+
+    /**
+     * 首次启动时主动弹出电池优化白名单的系统对话框（仅一次）。
+     * 闹钟属于 Doze 下仍需准点触发的场景，白名单是官方认可的做法；
+     * 用户拒绝后首页横幅仍可再次引导。
+     */
+    private fun requestBatteryWhitelistOnFirstRun() {
+        val prefs = getSharedPreferences(PREFS_STABILITY, MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_BATTERY_ASKED, false)) return
+        prefs.edit().putBoolean(KEY_BATTERY_ASKED, true).apply()
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+        try {
+            startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    .setData(Uri.parse("package:$packageName"))
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "first-run battery whitelist request not available", e)
+        }
+    }
+
+    private fun isAutoStartVendor(): Boolean {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        return AUTO_START_VENDOR_KEYS.any { manufacturer.contains(it) }
+    }
+
+    /** 逐个尝试跳转厂商自启动设置页，成功返回 true。 */
+    private fun tryOpenAutoStartPage(): Boolean {
+        for ((pkg, cls) in AUTO_START_PAGES) {
+            try {
+                startActivity(
+                    Intent()
+                        .setClassName(pkg, cls)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+                return true
+            } catch (_: Exception) {
+                // 该厂商页面不存在，尝试下一个
+            }
+        }
+        return false
     }
 
     private fun handleMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -152,6 +223,31 @@ class MainActivity : FlutterActivity() {
                 val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                     .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                 startActivity(intent)
+                result.success(null)
+            }
+            "canUseFullScreenIntent" -> {
+                // Android 14+ 全屏意图可能被用户在通知设置中撤销（侧载默认也可能不授予）
+                result.success(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent()
+                    } else {
+                        true
+                    }
+                )
+            }
+            "needsAutoStartGuide" -> result.success(isAutoStartVendor())
+            "openAutoStartSettings" -> {
+                if (!tryOpenAutoStartPage()) {
+                    // 兜底：应用详情页，用户可从"通知/电池"入口自行寻找自启动开关
+                    try {
+                        startActivity(
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                .setData(Uri.parse("package:$packageName"))
+                        )
+                    } catch (e: Exception) {
+                        Log.w(TAG, "cannot open app details", e)
+                    }
+                }
                 result.success(null)
             }
             "pendingRingingAlarm" -> result.success(AlarmRingService.currentAlarmId.get())

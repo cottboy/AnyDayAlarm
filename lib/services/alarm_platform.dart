@@ -71,6 +71,18 @@ class AlarmPlatform {
   static Future<void> openNotificationSettings() async =>
       await _channel.invokeMethod('openNotificationSettings');
 
+  /// 锁屏全屏弹窗是否可用（Android 14+ 可被用户在通知设置中撤销）。
+  static Future<bool> canUseFullScreenIntent() async =>
+      await _channel.invokeMethod<bool>('canUseFullScreenIntent') ?? true;
+
+  /// 当前机型是否需要引导用户开启自启动（仅已知会拦截后台拉起的国产 ROM）。
+  static Future<bool> needsAutoStartGuide() async =>
+      await _channel.invokeMethod<bool>('needsAutoStartGuide') ?? false;
+
+  /// 跳转厂商自启动设置页；失败时兜底到应用详情页。
+  static Future<void> openAutoStartSettings() async =>
+      await _channel.invokeMethod('openAutoStartSettings');
+
   /// 当前是否有正在响铃的闹钟（冷启动后拉取，用于恢复响铃页）。
   static Future<String?> pendingRingingAlarm() async =>
       await _channel.invokeMethod<String>('pendingRingingAlarm');

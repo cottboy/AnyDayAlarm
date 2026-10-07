@@ -34,6 +34,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeBatteryBannerBody => '部分手机会阻止闹钟准时响铃';
 
   @override
+  String get homeFullscreenBannerTitle => '锁屏全屏提醒被关闭';
+
+  @override
+  String get homeFullscreenBannerBody => '开启后响铃界面才能在锁屏上直接弹出';
+
+  @override
+  String get homeAutoStartBannerTitle => '建议允许自启动';
+
+  @override
+  String get homeAutoStartBannerBody => '此机型清理后台后会拦截闹钟拉起，允许自启动可保证准时响铃';
+
+  @override
+  String get homeBannerDismiss => '不再提醒';
+
+  @override
   String homeNextRingLabel(String time) {
     return '下次响铃：$time';
   }

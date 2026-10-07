@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/alarm_repository.dart';
 import '../l10n/app_localizations.dart';
@@ -18,9 +19,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _autoStartDismissKey = 'autostart_hint_dismissed';
+
   bool _exactOk = true;
   bool _notifyOk = true;
   bool _batteryOk = true;
+  bool _fullscreenOk = true;
+  bool _autoStartHint = false;
+  bool _autoStartDismissed = false;
 
   @override
   void initState() {
@@ -33,13 +39,26 @@ class _HomePageState extends State<HomePage> {
       AlarmPlatform.canScheduleExactAlarms(),
       AlarmPlatform.areNotificationsEnabled(),
       AlarmPlatform.isIgnoringBatteryOptimizations(),
+      AlarmPlatform.canUseFullScreenIntent(),
+      AlarmPlatform.needsAutoStartGuide(),
     ]);
+    final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
       _exactOk = results[0];
       _notifyOk = results[1];
       _batteryOk = results[2];
+      _fullscreenOk = results[3];
+      _autoStartHint = results[4];
+      _autoStartDismissed = prefs.getBool(_autoStartDismissKey) ?? false;
     });
+  }
+
+  Future<void> _dismissAutoStartHint() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoStartDismissKey, true);
+    if (!mounted) return;
+    setState(() => _autoStartDismissed = true);
   }
 
   /// 按"下一次触发时间"排序：启用的在前，未启用的按一天内时间排。
@@ -102,36 +121,63 @@ class _HomePageState extends State<HomePage> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
               children: [
-                if (!_exactOk) _PermissionCard(
-                  icon: Icons.alarm_off_outlined,
-                  title: l10n.homePermissionBannerTitle,
-                  body: l10n.homePermissionBannerBody,
-                  actionLabel: l10n.homePermissionBannerAction,
-                  onAction: () async {
-                    await AlarmPlatform.openExactAlarmSettings();
-                    _refreshPermissions();
-                  },
-                )
-                else if (!_notifyOk) _PermissionCard(
-                  icon: Icons.notifications_off_outlined,
-                  title: l10n.homePermissionBannerTitle,
-                  body: l10n.homePermissionBannerBody,
-                  actionLabel: l10n.homePermissionBannerAction,
-                  onAction: () async {
-                    await AlarmPlatform.openNotificationSettings();
-                    _refreshPermissions();
-                  },
-                )
-                else if (!_batteryOk) _PermissionCard(
-                  icon: Icons.battery_saver_outlined,
-                  title: l10n.homeBatteryBannerTitle,
-                  body: l10n.homeBatteryBannerBody,
-                  actionLabel: l10n.homePermissionBannerAction,
-                  onAction: () async {
-                    await AlarmPlatform.requestIgnoreBatteryOptimizations();
-                    _refreshPermissions();
-                  },
-                ),
+                // 稳定性引导：多个问题并列展示，每条直达对应设置页
+                if (!_exactOk)
+                  _PermissionCard(
+                    icon: Icons.alarm_off_outlined,
+                    title: l10n.homePermissionBannerTitle,
+                    body: l10n.homePermissionBannerBody,
+                    actionLabel: l10n.homePermissionBannerAction,
+                    onAction: () async {
+                      await AlarmPlatform.openExactAlarmSettings();
+                      _refreshPermissions();
+                    },
+                  ),
+                if (!_notifyOk)
+                  _PermissionCard(
+                    icon: Icons.notifications_off_outlined,
+                    title: l10n.homePermissionBannerTitle,
+                    body: l10n.homePermissionBannerBody,
+                    actionLabel: l10n.homePermissionBannerAction,
+                    onAction: () async {
+                      await AlarmPlatform.openNotificationSettings();
+                      _refreshPermissions();
+                    },
+                  ),
+                if (!_batteryOk)
+                  _PermissionCard(
+                    icon: Icons.battery_saver_outlined,
+                    title: l10n.homeBatteryBannerTitle,
+                    body: l10n.homeBatteryBannerBody,
+                    actionLabel: l10n.homePermissionBannerAction,
+                    onAction: () async {
+                      await AlarmPlatform.requestIgnoreBatteryOptimizations();
+                      _refreshPermissions();
+                    },
+                  ),
+                if (!_fullscreenOk)
+                  _PermissionCard(
+                    icon: Icons.fullscreen_exit_outlined,
+                    title: l10n.homeFullscreenBannerTitle,
+                    body: l10n.homeFullscreenBannerBody,
+                    actionLabel: l10n.homePermissionBannerAction,
+                    onAction: () async {
+                      await AlarmPlatform.openNotificationSettings();
+                      _refreshPermissions();
+                    },
+                  ),
+                if (_autoStartHint && !_autoStartDismissed)
+                  _PermissionCard(
+                    icon: Icons.restart_alt_outlined,
+                    title: l10n.homeAutoStartBannerTitle,
+                    body: l10n.homeAutoStartBannerBody,
+                    actionLabel: l10n.homePermissionBannerAction,
+                    onAction: () async {
+                      await AlarmPlatform.openAutoStartSettings();
+                      _refreshPermissions();
+                    },
+                    onDismiss: _dismissAutoStartHint,
+                  ),
                 ...alarms.map((a) => _AlarmCard(
                       alarm: a,
                       onToggle: (v) => _toggle(a, v),
@@ -182,6 +228,7 @@ class _PermissionCard extends StatelessWidget {
     required this.body,
     required this.actionLabel,
     required this.onAction,
+    this.onDismiss,
   });
 
   final IconData icon;
@@ -190,17 +237,25 @@ class _PermissionCard extends StatelessWidget {
   final String actionLabel;
   final VoidCallback onAction;
 
+  /// 可选的次级动作（如"不再提醒"），仅无法检测状态的引导项使用。
+  final VoidCallback? onDismiss;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.only(bottom: 8, top: 4),
       color: scheme.secondaryContainer,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 12, 4, 4),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: scheme.onSecondaryContainer),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(icon, color: scheme.onSecondaryContainer),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -219,11 +274,27 @@ class _PermissionCard extends StatelessWidget {
                           color: scheme.onSecondaryContainer,
                         ),
                   ),
+                  if (onDismiss != null)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: onDismiss,
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor:
+                              scheme.onSecondaryContainer.withValues(alpha: 0.7),
+                          textStyle: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        child: Text(l10n.homeBannerDismiss),
+                      ),
+                    ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            TextButton(onPressed: onAction, child: Text(actionLabel)),
+            TextButton(
+              onPressed: onAction,
+              child: Text(actionLabel),
+            ),
           ],
         ),
       ),

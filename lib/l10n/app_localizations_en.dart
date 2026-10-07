@@ -38,6 +38,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Some phones may prevent alarms from ringing on time';
 
   @override
+  String get homeFullscreenBannerTitle => 'Full-screen alarm alert is off';
+
+  @override
+  String get homeFullscreenBannerBody =>
+      'Allow it so the ringing screen can show over the lock screen';
+
+  @override
+  String get homeAutoStartBannerTitle => 'Consider allowing auto-start';
+
+  @override
+  String get homeAutoStartBannerBody =>
+      'This device may block alarm relaunch after the app is swiped away';
+
+  @override
+  String get homeBannerDismiss => 'Don\'t remind again';
+
+  @override
   String homeNextRingLabel(String time) {
     return 'Next ring: $time';
   }
